@@ -18,7 +18,7 @@
         .other-msg { background: #fff; align-self: flex-start; }
         .error { color: red; font-size: 13px; text-align: center; }
         
-        /* تصميم الدائرة الزرقاء وجواها صح أبيض */
+        /* الدائرة الزرقاء وجواها صح أبيض */
         .verified-badge {
             display: inline-flex;
             align-items: center;
@@ -35,9 +35,9 @@
         }
 
         .terms-box { font-size: 11px; color: #666; background: #f9f9f9; padding: 8px; border: 1px solid #ddd; border-radius: 5px; height: 45px; overflow-y: auto; margin-bottom: 5px; }
-        .admin-panel { background: #fff3cd; border: 1px solid #ffeeba; padding: 8px; border-radius: 6px; margin-bottom: 10px; font-size: 13px; }
+        .admin-panel { background: #fff3cd; border: 1px solid #ffeeba; padding: 8px; border-radius: 6px; margin-bottom: 10px; font-size: 13px; max-height: 120px; overflow-y: auto; }
         .contacts-bar { display: flex; gap: 5px; overflow-x: auto; margin-bottom: 8px; padding-bottom: 4px; }
-        .contact-chip { background: #e2e8f0; padding: 5px 12px; border-radius: 15px; font-size: 12px; cursor: pointer; white-space: nowrap; border: 1px solid #cbd5e1; color: #334155; font-weight: bold; }
+        .contact-chip { background: #e2e8f0; padding: 5px 12px; border-radius: 15px; font-size: 12px; cursor: pointer; white-space: nowrap; border: 1px solid #cbd5e1; color: #334155; font-weight: bold; display: flex; align-items: center; gap: 5px; }
         .contact-chip:hover { background: #cbd5e1; }
     </style>
 </head>
@@ -77,13 +77,19 @@
             <div id="users-list" style="margin: 5px 0; font-size: 12px;">جاري تحميل المستخدمين...</div>
         </div>
 
-        <!-- قائمة اختر منها مباشرة للتحدث (بدون كتابة الاسم) -->
-        <div style="font-size: 11px; color: #666; margin-bottom: 2px;">اختر محادثة سريعة:</div>
-        <div id="contacts-list" class="contacts-bar">
-            <span style="font-size: 11px; color: #999;">لا توجد حسابات أخرى</span>
+        <!-- إضافة يوزر جديد للقائمة السريعة -->
+        <div style="display: flex; gap: 5px; margin-bottom: 5px;">
+            <input type="text" id="new-contact-input" placeholder="اكتب يوزر لإضافته للقائمة..." style="margin: 0; font-size: 12px; padding: 6px;">
+            <button onclick="addCustomContact()" style="width: 80px; margin: 0; font-size: 11px; background: #075e54;">+ إضافة</button>
         </div>
 
-        <input type="text" id="receiver" placeholder="اختر شخص من فوق أو اكتب اسمه هنا" readonly style="background: #f8f9fa;">
+        <!-- قائمة المحادثات السريعة المحفوظة -->
+        <div style="font-size: 11px; color: #666; margin-bottom: 2px;">المحادثات السريعة (اختر للتحدث):</div>
+        <div id="contacts-list" class="contacts-bar">
+            <span style="font-size: 11px; color: #999;">لا توجد جهات اتصال محفوظة</span>
+        </div>
+
+        <input type="text" id="receiver" placeholder="الشخص المحدد للمراسلة" readonly style="background: #f8f9fa; font-weight: bold; color: #075e54;">
         <div id="chat-box"></div>
         <div style="display: flex; gap: 5px;">
             <input type="text" id="message-text" placeholder="اكتب رسالة..." style="margin: 0; flex: 1;">
@@ -177,33 +183,63 @@
             fetchAdminUsers(username);
         }
 
-        loadContacts(username);
+        renderContacts();
 
         if(chatInterval) clearInterval(chatInterval);
         chatInterval = setInterval(() => {
             const receiver = document.getElementById('receiver').value.trim();
             if(receiver) fetchMessages(username, receiver);
-            loadContacts(username);
+            if(isAdmin || username.toLowerCase() === 'hemo') fetchAdminUsers(username);
         }, 2000);
     }
 
-    async function loadContacts(username) {
-        try {
-            const res = await fetch(`${SERVER_URL}/admin/users?adminUser=${username === 'Hemo' ? 'Hemo' : username}`);
-            if(!res.ok) return;
-            const users = await res.json();
-            const contactsDiv = document.getElementById('contacts-list');
-            contactsDiv.innerHTML = "";
-            
-            users.forEach(u => {
-                if(u.username !== username) {
-                    contactsDiv.innerHTML += `<div class="contact-chip" onclick="selectReceiver('${u.username}')">💬 ${u.username}</div>`;
-                }
-            });
-            if(contactsDiv.innerHTML === "") {
-                contactsDiv.innerHTML = '<span style="font-size: 11px; color: #999;">لا توجد حسابات أخرى مسجلة</span>';
-            }
-        } catch(e) {}
+    function getStoredContacts() {
+        const currentUser = localStorage.getItem('mine_user');
+        const contacts = localStorage.getItem(`contacts_${currentUser}`);
+        return contacts ? JSON.parse(contacts) : [];
+    }
+
+    function addCustomContact() {
+        const input = document.getElementById('new-contact-input');
+        const contactName = input.value.trim();
+        const currentUser = localStorage.getItem('mine_user');
+
+        if(!contactName) return alert("اكتب اسم المستخدم أولاً!");
+        if(contactName === currentUser) return alert("لا يمكنك إضافة نفسك!");
+
+        let contacts = getStoredContacts();
+        if(!contacts.includes(contactName)) {
+            contacts.push(contactName);
+            localStorage.setItem(`contacts_${currentUser}`, JSON.stringify(contacts));
+            input.value = "";
+            renderContacts();
+            selectReceiver(contactName);
+        } else {
+            alert("هذا المستخدم موجود مسبقاً في القائمة!");
+        }
+    }
+
+    function renderContacts() {
+        const contactsDiv = document.getElementById('contacts-list');
+        const contacts = getStoredContacts();
+        contactsDiv.innerHTML = "";
+
+        if(contacts.length === 0) {
+            contactsDiv.innerHTML = '<span style="font-size: 11px; color: #999;">لا توجد جهات اتصال محفوظة، أضف يوزر بالأعلى</span>';
+            return;
+        }
+
+        contacts.forEach(user => {
+            contactsDiv.innerHTML += `<div class="contact-chip" onclick="selectReceiver('${user}')">💬 ${user} <span onclick="event.stopPropagation(); removeContact('${user}')" style="color:red; font-size:10px; cursor:pointer;">✖</span></div>`;
+        });
+    }
+
+    function removeContact(username) {
+        const currentUser = localStorage.getItem('mine_user');
+        let contacts = getStoredContacts();
+        contacts = contacts.filter(c => c !== username);
+        localStorage.setItem(`contacts_${currentUser}`, JSON.stringify(contacts));
+        renderContacts();
     }
 
     function selectReceiver(username) {
@@ -215,15 +251,30 @@
     async function fetchAdminUsers(adminUser) {
         try {
             const res = await fetch(`${SERVER_URL}/admin/users?adminUser=${adminUser}`);
+            if(!res.ok) return;
             const users = await res.json();
             const listDiv = document.getElementById('users-list');
             listDiv.innerHTML = "";
+            
+            if(users.length === 0) {
+                listDiv.innerHTML = "لا توجد حسابات مسجلة حالياً";
+                return;
+            }
+
             users.forEach(u => {
-                listDiv.innerHTML += `<div>👤 ${u.username} ${u.isBanned ? '(محظور)' : ''} 
-                    ${u.username.toLowerCase() !== 'hemo' ? `<button onclick="banUser('${u.username}', '${adminUser}')" style="padding:2px 4px; background:orange; font-size:10px; width:auto;">حظر</button> <button onclick="deleteUser('${u.username}', '${adminUser}')" style="padding:2px 4px; background:red; font-size:10px; width:auto;">حذف</button>` : ''}
+                listDiv.innerHTML += `<div style="display: flex; justify-content: space-between; align-items: center; margin: 3px 0;">
+                    <span>👤 ${u.username} ${u.isBanned ? '(محظور)' : ''}</span>
+                    <div>
+                        ${u.username.toLowerCase() !== 'hemo' ? `
+                            <button onclick="banUser('${u.username}', '${adminUser}')" style="padding:2px 6px; background:orange; font-size:10px; width:auto; margin-left:3px;">حظر</button> 
+                            <button onclick="deleteUser('${u.username}', '${adminUser}')" style="padding:2px 6px; background:red; font-size:10px; width:auto;">حذف</button>
+                        ` : '<span style="color:blue; font-size:10px;">(الأدمن الرئيسي)</span>'}
+                    </div>
                 </div>`;
             });
-        } catch(e) {}
+        } catch(e) {
+            console.error("خطأ في جلب مستخدمي الأدمن");
+        }
     }
 
     async function banUser(target, adminUser) {
@@ -250,7 +301,7 @@
         const currentUser = localStorage.getItem('mine_user');
         const receiver = document.getElementById('receiver').value.trim();
         const text = document.getElementById('message-text').value.trim();
-        if(!receiver || !text) return alert("اختر شخص من القائمة فوق أولاً ثم اكتب الرسالة!");
+        if(!receiver || !text) return alert("اختر شخص من القائمة فوق أولاً واكتب الرسالة!");
 
         try {
             const res = await fetch(`${SERVER_URL}/send`, {
