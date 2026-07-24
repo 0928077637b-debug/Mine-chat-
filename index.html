@@ -18,7 +18,7 @@
         .other-msg { background: #fff; align-self: flex-start; }
         .error { color: red; font-size: 13px; text-align: center; }
         .badge { color: #1da1f2; font-weight: bold; margin-right: 3px; }
-        .terms-box { font-size: 11px; color: #666; background: #f9f9f9; padding: 8px; border: 1px solid #ddd; border-radius: 5px; height: 60px; overflow-y: auto; margin-bottom: 5px; }
+        .terms-box { font-size: 11px; color: #666; background: #f9f9f9; padding: 8px; border: 1px solid #ddd; border-radius: 5px; height: 50px; overflow-y: auto; margin-bottom: 5px; }
         .admin-panel { background: #fff3cd; border: 1px solid #ffeeba; padding: 8px; border-radius: 6px; margin-bottom: 10px; font-size: 13px; }
     </style>
 </head>
@@ -27,21 +27,17 @@
 <div class="container">
     <h2>Mine Chat 🛡️</h2>
 
-    <!-- تسجيل الدخول / إنشاء حساب -->
+    <!-- تسجيل الدخول -->
     <div id="auth-section">
         <p style="font-size: 11px; color: #555; text-align: center; margin: 2px;">الحد الأقصى 5 حسابات مسجلة فقط</p>
-        
         <input type="text" id="username" placeholder="اسم المستخدم (Hemo للأدمن)">
         <input type="password" id="password" placeholder="كلمة المرور">
         
         <div class="terms-box">
-            <b>شروط وأحكام استخدام المنصة:</b><br>
-            1. يمنع منعاً باتاً نشر محتوى مسيء أو إزعاج المستخدمين.<br>
-            2. يحق للإدارة حظر أي حساب مخالف لمدة 24 ساعة أو حذفه لتفريغ مساحة لمتسخدم جديد.<br>
-            3. هذه المنصة خاصة ومحمية بقواعد الاستخدام المشترك.
+            <b>شروط الاستخدام:</b> منع الإساءة، يحق للإدارة الحظر أو الحذف لتفريغ مساحة لمتسخدم جديد.
         </div>
-        <label style="font-size: 12px; display: flex; align-items: center; gap: 5px; margin-bottom: 8px;">
-            <input type="checkbox" id="terms-check" style="width: auto; margin:0;"> أوافق على الشروط والأحكام الرسمية
+        <label style="font-size: 11px; display: flex; align-items: center; gap: 5px; margin-bottom: 6px;">
+            <input type="checkbox" id="terms-check" style="width: auto; margin:0;" checked> أوافق على الشروط والأحكام
         </label>
 
         <button onclick="register()">تسجيل حساب جديد</button>
@@ -56,7 +52,7 @@
             <button onclick="logout()" style="width: auto; padding: 4px 8px; background: #ff4d4d; font-size: 11px;">خروج</button>
         </div>
 
-        <!-- لوحة تحكم الأدمن (تظهر فقط لـ Hemo) -->
+        <!-- لوحة تحكم الأدمن -->
         <div id="admin-section" class="admin-panel hidden">
             <b>👑 لوحة تحكم الإدارة:</b>
             <div id="users-list" style="margin: 5px 0; font-size: 12px;">جاري تحميل المستخدمين...</div>
@@ -73,9 +69,16 @@
 
 <script>
     const SERVER_URL = "https://mine-chat1.onrender.com";
-    let currentUser = "";
-    let isAdminUser = false;
     let chatInterval = null;
+
+    // التحقق المباشر لو المستخدم مسجل مسبقاً قبل تحديث الصفحة
+    window.onload = function() {
+        const savedUser = localStorage.getItem('mine_user');
+        const savedAdmin = localStorage.getItem('mine_admin') === 'true';
+        if (savedUser) {
+            startChatSession(savedUser, savedAdmin, savedUser.toLowerCase() === 'hemo');
+        }
+    };
 
     function showError(msg) {
         document.getElementById('auth-error').innerText = msg;
@@ -86,8 +89,8 @@
         const password = document.getElementById('password').value.trim();
         const acceptTerms = document.getElementById('terms-check').checked;
 
-        if(!username || !password) return showError("الرجاء ملء حقول الإدخال!");
-        if(!acceptTerms) return showError("يجب الموافقة على الشروط والأحكام!");
+        if(!username || !password) return showError("الرجاء ملء الحقول!");
+        if(!acceptTerms) return showError("يجب الموافقة على الشروط!");
 
         try {
             const res = await fetch(`${SERVER_URL}/register`, {
@@ -97,7 +100,7 @@
             });
             const data = await res.json();
             if(res.ok) {
-                alert("تم إنشاء الحساب والموافقة على الشروط بنجاح!");
+                alert("تم إنشاء الحساب بنجاح، يمكنك تسجيل الدخول الآن!");
                 showError("");
             } else {
                 showError(data.error);
@@ -120,21 +123,10 @@
             });
             const data = await res.json();
             if(res.ok) {
-                currentUser = username;
-                isAdminUser = data.isAdmin;
-                
-                document.getElementById('auth-section').classList.add('hidden');
-                document.getElementById('chat-section').classList.remove('hidden');
-                
-                let badge = data.verified ? '<span class="badge">✔</span>' : '';
-                document.getElementById('current-user-label').innerHTML = `أهلاً: ${currentUser} ${badge}`;
-
-                if(isAdminUser) {
-                    document.getElementById('admin-section').classList.remove('hidden');
-                    fetchAdminUsers();
-                }
-
-                chatInterval = setInterval(fetchMessages, 2000);
+                // حفظ البيانات في ذاكرة المتصفح لتجنب الخروج عند التحديث
+                localStorage.setItem('mine_user', data.username);
+                localStorage.setItem('mine_admin', data.isAdmin);
+                startChatSession(data.username, data.isAdmin, data.verified);
             } else {
                 showError(data.error);
             }
@@ -143,16 +135,31 @@
         }
     }
 
-    async function fetchAdminUsers() {
-        if(!isAdminUser) return;
+    function startChatSession(username, isAdmin, verified) {
+        document.getElementById('auth-section').classList.add('hidden');
+        document.getElementById('chat-section').classList.remove('hidden');
+        
+        let badge = (verified || username.toLowerCase() === 'hemo') ? '<span class="badge">✔</span>' : '';
+        document.getElementById('current-user-label').innerHTML = `أهلاً: ${username} ${badge}`;
+
+        if(isAdmin || username.toLowerCase() === 'hemo') {
+            document.getElementById('admin-section').classList.remove('hidden');
+            fetchAdminUsers(username);
+        }
+
+        if(chatInterval) clearInterval(chatInterval);
+        chatInterval = setInterval(() => fetchMessages(username), 2000);
+    }
+
+    async function fetchAdminUsers(adminUser) {
         try {
-            const res = await fetch(`${SERVER_URL}/admin/users?adminUser=${currentUser}`);
+            const res = await fetch(`${SERVER_URL}/admin/users?adminUser=${adminUser}`);
             const users = await res.json();
             const listDiv = document.getElementById('users-list');
             listDiv.innerHTML = "";
             users.forEach(u => {
                 listDiv.innerHTML += `<div>👤 ${u.username} ${u.isBanned ? '(محظور)' : ''} 
-                    ${u.username !== 'Hemo' ? `<button onclick="banUser('${u.username}')" style="padding:2px 5px; background:orange; font-size:10px; width:auto;">حظر 24س</button> <button onclick="deleteUser('${u.username}')" style="padding:2px 5px; background:red; font-size:10px; width:auto;">حذف</button>` : ''}
+                    ${u.username.toLowerCase() !== 'hemo' ? `<button onclick="banUser('${u.username}', '${adminUser}')" style="padding:2px 4px; background:orange; font-size:10px; width:auto;">حظر</button> <button onclick="deleteUser('${u.username}', '${adminUser}')" style="padding:2px 4px; background:red; font-size:10px; width:auto;">حذف</button>` : ''}
                 </div>`;
             });
         } catch(e) {
@@ -160,27 +167,28 @@
         }
     }
 
-    async function banUser(target) {
-        if(!confirm(`هل تريد حظر ${target} لمدة 24 ساعة؟`)) return;
+    async function banUser(target, adminUser) {
+        if(!confirm(`حظر ${target} لمدة 24 ساعة؟`)) return;
         await fetch(`${SERVER_URL}/admin/ban-user`, {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({adminUser: currentUser, targetUser: target})
+            body: JSON.stringify({adminUser, targetUser: target})
         });
-        fetchAdminUsers();
+        fetchAdminUsers(adminUser);
     }
 
-    async function deleteUser(target) {
-        if(!confirm(`هل تريد حذف حساب ${target} لتفريغ مكانه؟`)) return;
+    async function deleteUser(target, adminUser) {
+        if(!confirm(`حذف حساب ${target} لتفريغ مكانه؟`)) return;
         await fetch(`${SERVER_URL}/admin/delete-user`, {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({adminUser: currentUser, targetUser: target})
+            body: JSON.stringify({adminUser, targetUser: target})
         });
-        fetchAdminUsers();
+        fetchAdminUsers(adminUser);
     }
 
     async function sendMessage() {
+        const currentUser = localStorage.getItem('mine_user');
         const receiver = document.getElementById('receiver').value.trim();
         const text = document.getElementById('message-text').value.trim();
         if(!receiver || !text) return;
@@ -194,7 +202,7 @@
             const data = await res.json();
             if(res.ok) {
                 document.getElementById('message-text').value = "";
-                fetchMessages();
+                fetchMessages(currentUser);
             } else {
                 alert(data.error);
             }
@@ -203,7 +211,7 @@
         }
     }
 
-    async function fetchMessages() {
+    async function fetchMessages(currentUser) {
         const receiver = document.getElementById('receiver').value.trim();
         if(!receiver) return;
 
@@ -215,7 +223,7 @@
             messages.forEach(msg => {
                 const div = document.createElement('div');
                 div.className = `msg ${msg.sender === currentUser ? 'my-msg' : 'other-msg'}`;
-                let badge = msg.verified ? '<span class="badge">✔</span>' : '';
+                let badge = (msg.verified || msg.sender.toLowerCase() === 'hemo') ? '<span class="badge">✔</span>' : '';
                 div.innerHTML = `<b>${msg.sender}</b> ${badge}: ${msg.text}`;
                 chatBox.appendChild(div);
             });
@@ -226,13 +234,10 @@
     }
 
     function logout() {
-        currentUser = "";
-        isAdminUser = false;
+        localStorage.removeItem('mine_user');
+        localStorage.removeItem('mine_admin');
         clearInterval(chatInterval);
-        document.getElementById('chat-section').classList.add('hidden');
-        document.getElementById('auth-section').classList.remove('hidden');
-        document.getElementById('username').value = "";
-        document.getElementById('password').value = "";
+        location.reload();
     }
 </script>
 
