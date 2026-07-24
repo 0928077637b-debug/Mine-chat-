@@ -3,58 +3,78 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>منصة التواصل المصغرة</title>
+    <title>Mine Chat - المنصة الرسمية</title>
     <style>
         body { font-family: Arial, sans-serif; background: #e5ddd5; margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; height: 100vh; }
-        .container { width: 100%; max-width: 400px; background: #fff; padding: 20px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); display: flex; flex-direction: column; height: 90vh; }
+        .container { width: 100%; max-width: 400px; background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.15); display: flex; flex-direction: column; height: 92vh; }
         h2 { text-align: center; color: #075e54; margin-top: 0; }
-        input, button { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; font-size: 16px; }
+        input, button { width: 100%; padding: 10px; margin: 6px 0; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; font-size: 15px; }
         button { background: #25d366; color: white; border: none; cursor: pointer; font-weight: bold; }
         button:hover { background: #128c7e; }
         .hidden { display: none !important; }
-        #chat-box { flex: 1; border: 1px solid #ddd; background: #efeae2; border-radius: 5px; padding: 10px; overflow-y: auto; margin-bottom: 10px; display: flex; flex-direction: column; }
-        .msg { padding: 8px 12px; margin: 5px 0; border-radius: 8px; max-width: 75%; word-wrap: break-word; }
+        #chat-box { flex: 1; border: 1px solid #ddd; background: #efeae2; border-radius: 8px; padding: 10px; overflow-y: auto; margin-bottom: 10px; display: flex; flex-direction: column; }
+        .msg { padding: 8px 12px; margin: 5px 0; border-radius: 8px; max-width: 75%; word-wrap: break-word; font-size: 14px; }
         .my-msg { background: #dcf8c6; align-self: flex-end; }
         .other-msg { background: #fff; align-self: flex-start; }
-        .error { color: red; font-size: 14px; text-align: center; }
-        .info { font-size: 12px; color: #555; text-align: center; margin-bottom: 5px; }
+        .error { color: red; font-size: 13px; text-align: center; }
+        .badge { color: #1da1f2; font-weight: bold; margin-right: 3px; }
+        .terms-box { font-size: 11px; color: #666; background: #f9f9f9; padding: 8px; border: 1px solid #ddd; border-radius: 5px; height: 60px; overflow-y: auto; margin-bottom: 5px; }
+        .admin-panel { background: #fff3cd; border: 1px solid #ffeeba; padding: 8px; border-radius: 6px; margin-bottom: 10px; font-size: 13px; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>تطبيق الشات المصغر</h2>
+    <h2>Mine Chat 🛡️</h2>
 
-    <!-- قسم تسجيل الدخول / إنشاء حساب -->
+    <!-- تسجيل الدخول / إنشاء حساب -->
     <div id="auth-section">
-        <p class="info">الحد الأقصى للمنصة 5 حسابات فقط!</p>
-        <input type="text" id="username" placeholder="اسم المستخدم (Username)">
-        <input type="password" id="password" placeholder="كلمة المرور (Password)">
+        <p style="font-size: 11px; color: #555; text-align: center; margin: 2px;">الحد الأقصى 5 حسابات مسجلة فقط</p>
+        
+        <input type="text" id="username" placeholder="اسم المستخدم (Hemo للأدمن)">
+        <input type="password" id="password" placeholder="كلمة المرور">
+        
+        <div class="terms-box">
+            <b>شروط وأحكام استخدام المنصة:</b><br>
+            1. يمنع منعاً باتاً نشر محتوى مسيء أو إزعاج المستخدمين.<br>
+            2. يحق للإدارة حظر أي حساب مخالف لمدة 24 ساعة أو حذفه لتفريغ مساحة لمتسخدم جديد.<br>
+            3. هذه المنصة خاصة ومحمية بقواعد الاستخدام المشترك.
+        </div>
+        <label style="font-size: 12px; display: flex; align-items: center; gap: 5px; margin-bottom: 8px;">
+            <input type="checkbox" id="terms-check" style="width: auto; margin:0;"> أوافق على الشروط والأحكام الرسمية
+        </label>
+
         <button onclick="register()">تسجيل حساب جديد</button>
         <button onclick="login()" style="background: #34b7f1;">تسجيل الدخول</button>
         <p id="auth-error" class="error"></p>
     </div>
 
-    <!-- قسم الشات (يظهر بعد الدخول) -->
+    <!-- قسم الشات -->
     <div id="chat-section" class="hidden">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
-            <span id="current-user-label" style="font-weight: bold; color: #075e54;"></span>
-            <button onclick="logout()" style="width: auto; padding: 5px 10px; background: #ff4d4d; font-size: 12px;">خروج</button>
+            <span id="current-user-label" style="font-weight: bold; color: #075e54; font-size: 14px;"></span>
+            <button onclick="logout()" style="width: auto; padding: 4px 8px; background: #ff4d4d; font-size: 11px;">خروج</button>
         </div>
+
+        <!-- لوحة تحكم الأدمن (تظهر فقط لـ Hemo) -->
+        <div id="admin-section" class="admin-panel hidden">
+            <b>👑 لوحة تحكم الإدارة:</b>
+            <div id="users-list" style="margin: 5px 0; font-size: 12px;">جاري تحميل المستخدمين...</div>
+        </div>
+
         <input type="text" id="receiver" placeholder="اسم الشخص المراد مراسلته">
         <div id="chat-box"></div>
         <div style="display: flex; gap: 5px;">
             <input type="text" id="message-text" placeholder="اكتب رسالة..." style="margin: 0; flex: 1;">
-            <button onclick="sendMessage()" style="width: 80px; margin: 0;">إرسال</button>
+            <button onclick="sendMessage()" style="width: 70px; margin: 0;">إرسال</button>
         </div>
     </div>
 </div>
 
 <script>
-    // ⚠️ استبدل الرابط أدناه برابط سيرفرك الحقيقي في Katabump بدون شرطة مائلة في النهاية
-    const SERVER_URL = "https://mine-chat1.onrender.com/";
-
+    const SERVER_URL = "https://mine-chat1.onrender.com";
     let currentUser = "";
+    let isAdminUser = false;
     let chatInterval = null;
 
     function showError(msg) {
@@ -64,17 +84,20 @@
     async function register() {
         const username = document.getElementById('username').value.trim();
         const password = document.getElementById('password').value.trim();
-        if(!username || !password) return showError("الرجاء ملء الحقول!");
+        const acceptTerms = document.getElementById('terms-check').checked;
+
+        if(!username || !password) return showError("الرجاء ملء حقول الإدخال!");
+        if(!acceptTerms) return showError("يجب الموافقة على الشروط والأحكام!");
 
         try {
             const res = await fetch(`${SERVER_URL}/register`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, password })
+                body: JSON.stringify({ username, password, acceptTerms })
             });
             const data = await res.json();
             if(res.ok) {
-                alert("تم التسجيل بنجاح، يمكنك تسجيل الدخول الآن");
+                alert("تم إنشاء الحساب والموافقة على الشروط بنجاح!");
                 showError("");
             } else {
                 showError(data.error);
@@ -98,11 +121,19 @@
             const data = await res.json();
             if(res.ok) {
                 currentUser = username;
+                isAdminUser = data.isAdmin;
+                
                 document.getElementById('auth-section').classList.add('hidden');
                 document.getElementById('chat-section').classList.remove('hidden');
-                document.getElementById('current-user-label').innerText = `أهلاً: ${currentUser}`;
                 
-                // جلب الرسائل كل ثانيتين تلقائياً
+                let badge = data.verified ? '<span class="badge">✔</span>' : '';
+                document.getElementById('current-user-label').innerHTML = `أهلاً: ${currentUser} ${badge}`;
+
+                if(isAdminUser) {
+                    document.getElementById('admin-section').classList.remove('hidden');
+                    fetchAdminUsers();
+                }
+
                 chatInterval = setInterval(fetchMessages, 2000);
             } else {
                 showError(data.error);
@@ -110,6 +141,43 @@
         } catch(e) {
             showError("فشل الاتصال بالسيرفر");
         }
+    }
+
+    async function fetchAdminUsers() {
+        if(!isAdminUser) return;
+        try {
+            const res = await fetch(`${SERVER_URL}/admin/users?adminUser=${currentUser}`);
+            const users = await res.json();
+            const listDiv = document.getElementById('users-list');
+            listDiv.innerHTML = "";
+            users.forEach(u => {
+                listDiv.innerHTML += `<div>👤 ${u.username} ${u.isBanned ? '(محظور)' : ''} 
+                    ${u.username !== 'Hemo' ? `<button onclick="banUser('${u.username}')" style="padding:2px 5px; background:orange; font-size:10px; width:auto;">حظر 24س</button> <button onclick="deleteUser('${u.username}')" style="padding:2px 5px; background:red; font-size:10px; width:auto;">حذف</button>` : ''}
+                </div>`;
+            });
+        } catch(e) {
+            console.error("خطأ في جلب المستخدمين");
+        }
+    }
+
+    async function banUser(target) {
+        if(!confirm(`هل تريد حظر ${target} لمدة 24 ساعة؟`)) return;
+        await fetch(`${SERVER_URL}/admin/ban-user`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({adminUser: currentUser, targetUser: target})
+        });
+        fetchAdminUsers();
+    }
+
+    async function deleteUser(target) {
+        if(!confirm(`هل تريد حذف حساب ${target} لتفريغ مكانه؟`)) return;
+        await fetch(`${SERVER_URL}/admin/delete-user`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({adminUser: currentUser, targetUser: target})
+        });
+        fetchAdminUsers();
     }
 
     async function sendMessage() {
@@ -123,9 +191,12 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ sender: currentUser, receiver, text })
             });
+            const data = await res.json();
             if(res.ok) {
                 document.getElementById('message-text').value = "";
                 fetchMessages();
+            } else {
+                alert(data.error);
             }
         } catch(e) {
             console.error("خطأ في الإرسال");
@@ -139,14 +210,13 @@
         try {
             const res = await fetch(`${SERVER_URL}/messages?user1=${currentUser}&user2=${receiver}`);
             const messages = await res.json();
-            
             const chatBox = document.getElementById('chat-box');
             chatBox.innerHTML = "";
-            
             messages.forEach(msg => {
                 const div = document.createElement('div');
                 div.className = `msg ${msg.sender === currentUser ? 'my-msg' : 'other-msg'}`;
-                div.innerText = `${msg.sender}: ${msg.text}`;
+                let badge = msg.verified ? '<span class="badge">✔</span>' : '';
+                div.innerHTML = `<b>${msg.sender}</b> ${badge}: ${msg.text}`;
                 chatBox.appendChild(div);
             });
             chatBox.scrollTop = chatBox.scrollHeight;
@@ -157,6 +227,7 @@
 
     function logout() {
         currentUser = "";
+        isAdminUser = false;
         clearInterval(chatInterval);
         document.getElementById('chat-section').classList.add('hidden');
         document.getElementById('auth-section').classList.remove('hidden');
