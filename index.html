@@ -8,7 +8,7 @@
         body { font-family: Arial, sans-serif; background: #e5ddd5; margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; height: 100vh; }
         .container { width: 100%; max-width: 400px; background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.15); display: flex; flex-direction: column; height: 92vh; }
         h2 { text-align: center; color: #075e54; margin-top: 0; }
-        input, button { width: 100%; padding: 10px; margin: 6px 0; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; font-size: 15px; }
+        input, button, select { width: 100%; padding: 10px; margin: 6px 0; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; font-size: 15px; }
         button { background: #25d366; color: white; border: none; cursor: pointer; font-weight: bold; }
         button:hover { background: #128c7e; }
         .hidden { display: none !important; }
@@ -17,11 +17,28 @@
         .my-msg { background: #dcf8c6; align-self: flex-end; }
         .other-msg { background: #fff; align-self: flex-start; }
         .error { color: red; font-size: 13px; text-align: center; }
-        .badge { color: #1da1f2; font-weight: bold; margin-right: 3px; }
+        
+        /* تصميم الدائرة الزرقاء وجواها صح أبيض */
+        .verified-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 14px;
+            height: 14px;
+            background-color: #1da1f2;
+            color: white;
+            border-radius: 50%;
+            font-size: 9px;
+            font-weight: bold;
+            margin-right: 3px;
+            vertical-align: middle;
+        }
+
         .terms-box { font-size: 11px; color: #666; background: #f9f9f9; padding: 8px; border: 1px solid #ddd; border-radius: 5px; height: 45px; overflow-y: auto; margin-bottom: 5px; }
         .admin-panel { background: #fff3cd; border: 1px solid #ffeeba; padding: 8px; border-radius: 6px; margin-bottom: 10px; font-size: 13px; }
-        .recent-list { display: flex; gap: 5px; overflow-x: auto; margin-bottom: 8px; padding-bottom: 4px; }
-        .recent-chip { background: #e2e8f0; padding: 4px 10px; border-radius: 15px; font-size: 12px; cursor: pointer; white-space: nowrap; border: 1px solid #cbd5e1; color: #334155; }
+        .contacts-bar { display: flex; gap: 5px; overflow-x: auto; margin-bottom: 8px; padding-bottom: 4px; }
+        .contact-chip { background: #e2e8f0; padding: 5px 12px; border-radius: 15px; font-size: 12px; cursor: pointer; white-space: nowrap; border: 1px solid #cbd5e1; color: #334155; font-weight: bold; }
+        .contact-chip:hover { background: #cbd5e1; }
     </style>
 </head>
 <body>
@@ -60,12 +77,13 @@
             <div id="users-list" style="margin: 5px 0; font-size: 12px;">جاري تحميل المستخدمين...</div>
         </div>
 
-        <div style="font-size: 11px; color: #666; margin-bottom: 2px;">المراسلات الأخيرة:</div>
-        <div id="recent-chats" class="recent-list">
-            <span style="font-size: 11px; color: #999;">لا توجد محادثات حديثة</span>
+        <!-- قائمة اختر منها مباشرة للتحدث (بدون كتابة الاسم) -->
+        <div style="font-size: 11px; color: #666; margin-bottom: 2px;">اختر محادثة سريعة:</div>
+        <div id="contacts-list" class="contacts-bar">
+            <span style="font-size: 11px; color: #999;">لا توجد حسابات أخرى</span>
         </div>
 
-        <input type="text" id="receiver" placeholder="اسم الشخص المراد مراسلته">
+        <input type="text" id="receiver" placeholder="اختر شخص من فوق أو اكتب اسمه هنا" readonly style="background: #f8f9fa;">
         <div id="chat-box"></div>
         <div style="display: flex; gap: 5px;">
             <input type="text" id="message-text" placeholder="اكتب رسالة..." style="margin: 0; flex: 1;">
@@ -74,13 +92,13 @@
     </div>
 </div>
 
-<!-- صوت تنبيه صغير للرسائل -->
+<!-- صوت التنبيه للرسائل -->
 <audio id="notif-sound" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" preload="auto"></audio>
 
 <script>
     const SERVER_URL = "https://mine-chat1.onrender.com";
     let chatInterval = null;
-    let lastMessageCount = 0;
+    let lastMsgId = 0;
 
     window.onload = function() {
         const savedUser = localStorage.getItem('mine_user');
@@ -88,7 +106,6 @@
         if (savedUser) {
             startChatSession(savedUser, savedAdmin, savedUser.toLowerCase() === 'hemo');
         }
-        // طلب إذن إرسال الإشعارات من المتصفح
         if (Notification.permission !== "granted") {
             Notification.requestPermission();
         }
@@ -114,7 +131,7 @@
             });
             const data = await res.json();
             if(res.ok) {
-                alert("تم إنشاء الحساب بنجاح، يمكنك تسجيل الدخول الآن!");
+                alert("تم إنشاء الحساب بنجاح!");
                 showError("");
             } else {
                 showError(data.error);
@@ -152,47 +169,47 @@
         document.getElementById('auth-section').classList.add('hidden');
         document.getElementById('chat-section').classList.remove('hidden');
         
-        let badge = (verified || username.toLowerCase() === 'hemo') ? '<span class="badge">✔</span>' : '';
-        document.getElementById('current-user-label`').innerHTML = `أهلاً: ${username} ${badge}`;
+        let badgeHtml = (verified || username.toLowerCase() === 'hemo') ? '<span class="verified-badge">✓</span>' : '';
+        document.getElementById('current-user-label').innerHTML = `أهلاً: ${username} ${badgeHtml}`;
 
         if(isAdmin || username.toLowerCase() === 'hemo') {
             document.getElementById('admin-section').classList.remove('hidden');
             fetchAdminUsers(username);
         }
 
-        fetchRecentChats(username);
+        loadContacts(username);
 
         if(chatInterval) clearInterval(chatInterval);
         chatInterval = setInterval(() => {
-            fetchMessages(username);
-            fetchRecentChats(username);
+            const receiver = document.getElementById('receiver').value.trim();
+            if(receiver) fetchMessages(username, receiver);
+            loadContacts(username);
         }, 2000);
     }
 
-    async function fetchRecentChats(username) {
+    async function loadContacts(username) {
         try {
-            const res = await fetch(`${SERVER_URL}/recent-chats?username=${username}`);
-            const chats = await res.json();
-            const recentDiv = document.getElementById('recent-chats');
-            recentDiv.innerHTML = "";
+            const res = await fetch(`${SERVER_URL}/admin/users?adminUser=${username === 'Hemo' ? 'Hemo' : username}`);
+            if(!res.ok) return;
+            const users = await res.json();
+            const contactsDiv = document.getElementById('contacts-list');
+            contactsDiv.innerHTML = "";
             
-            if(chats.length === 0) {
-                recentDiv.innerHTML = '<span style="font-size: 11px; color: #999;">لا توجد محادثات حديثة</span>';
-                return;
-            }
-
-            chats.forEach(user => {
-                recentDiv.innerHTML += `<div class="recent-chip" onclick="selectReceiver('${user}')">💬 ${user}</div>`;
+            users.forEach(u => {
+                if(u.username !== username) {
+                    contactsDiv.innerHTML += `<div class="contact-chip" onclick="selectReceiver('${u.username}')">💬 ${u.username}</div>`;
+                }
             });
-        } catch(e) {
-            console.error("خطأ في جلب المحادثات الأخيرة");
-        }
+            if(contactsDiv.innerHTML === "") {
+                contactsDiv.innerHTML = '<span style="font-size: 11px; color: #999;">لا توجد حسابات أخرى مسجلة</span>';
+            }
+        } catch(e) {}
     }
 
     function selectReceiver(username) {
         document.getElementById('receiver').value = username;
         const currentUser = localStorage.getItem('mine_user');
-        fetchMessages(currentUser);
+        fetchMessages(currentUser, username);
     }
 
     async function fetchAdminUsers(adminUser) {
@@ -206,9 +223,7 @@
                     ${u.username.toLowerCase() !== 'hemo' ? `<button onclick="banUser('${u.username}', '${adminUser}')" style="padding:2px 4px; background:orange; font-size:10px; width:auto;">حظر</button> <button onclick="deleteUser('${u.username}', '${adminUser}')" style="padding:2px 4px; background:red; font-size:10px; width:auto;">حذف</button>` : ''}
                 </div>`;
             });
-        } catch(e) {
-            console.error("خطأ في جلب المستخدمين");
-        }
+        } catch(e) {}
     }
 
     async function banUser(target, adminUser) {
@@ -235,7 +250,7 @@
         const currentUser = localStorage.getItem('mine_user');
         const receiver = document.getElementById('receiver').value.trim();
         const text = document.getElementById('message-text').value.trim();
-        if(!receiver || !text) return;
+        if(!receiver || !text) return alert("اختر شخص من القائمة فوق أولاً ثم اكتب الرسالة!");
 
         try {
             const res = await fetch(`${SERVER_URL}/send`, {
@@ -246,54 +261,40 @@
             const data = await res.json();
             if(res.ok) {
                 document.getElementById('message-text').value = "";
-                fetchMessages(currentUser);
-                fetchRecentChats(currentUser);
+                fetchMessages(currentUser, receiver);
             } else {
                 alert(data.error);
             }
-        } catch(e) {
-            console.error("خطأ في الإرسال");
-        }
+        } catch(e) {}
     }
 
-    async function fetchMessages(currentUser) {
-        const receiver = document.getElementById('receiver').value.trim();
-        if(!receiver) return;
-
+    async function fetchMessages(currentUser, receiver) {
         try {
             const res = await fetch(`${SERVER_URL}/messages?user1=${currentUser}&user2=${receiver}`);
             const messages = await res.json();
             const chatBox = document.getElementById('chat-box');
             
-            // التحقق إذا وصلت رسالة جديدة وموجهة ليك من الشخص الآخر
-            if (messages.length > lastMessageCount) {
+            if (messages.length > 0) {
                 const latestMsg = messages[messages.length - 1];
-                if (latestMsg.sender !== currentUser) {
-                    // تشغيل صوت التنبيه
+                if (latestMsg.id > lastMsgId && latestMsg.sender !== currentUser) {
+                    lastMsgId = latestMsg.id;
                     document.getElementById('notif-sound').play().catch(e => {});
-                    
-                    // إظهار إشعار سطح مكتب للمتصفح
                     if (Notification.permission === "granted") {
-                        new Notification(`رسالة جديدة من ${latestMsg.sender}`, {
-                            body: latestMsg.text
-                        });
+                        new Notification(`رسالة جديدة من ${latestMsg.sender}`, { body: latestMsg.text });
                     }
                 }
             }
-            lastMessageCount = messages.length;
 
             chatBox.innerHTML = "";
             messages.forEach(msg => {
                 const div = document.createElement('div');
                 div.className = `msg ${msg.sender === currentUser ? 'my-msg' : 'other-msg'}`;
-                let badge = (msg.verified || msg.sender.toLowerCase() === 'hemo') ? '<span class="badge">✔</span>' : '';
-                div.innerHTML = `<b>${msg.sender}</b> ${badge}: ${msg.text}`;
+                let badgeHtml = (msg.verified || msg.sender.toLowerCase() === 'hemo') ? '<span class="verified-badge">✓</span>' : '';
+                div.innerHTML = `<b>${msg.sender}</b> ${badgeHtml}: ${msg.text}`;
                 chatBox.appendChild(div);
             });
             chatBox.scrollTop = chatBox.scrollHeight;
-        } catch(e) {
-            console.error("خطأ في جلب الرسائل");
-        }
+        } catch(e) {}
     }
 
     function logout() {
