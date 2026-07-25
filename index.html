@@ -18,7 +18,6 @@
         .other-msg { background: #fff; align-self: flex-start; }
         .error { color: red; font-size: 13px; text-align: center; }
         
-        /* الدائرة الزرقاء وجواها صح أبيض */
         .verified-badge {
             display: inline-flex;
             align-items: center;
@@ -35,7 +34,7 @@
         }
 
         .terms-box { font-size: 11px; color: #666; background: #f9f9f9; padding: 8px; border: 1px solid #ddd; border-radius: 5px; height: 45px; overflow-y: auto; margin-bottom: 5px; }
-        .admin-panel { background: #fff3cd; border: 1px solid #ffeeba; padding: 8px; border-radius: 6px; margin-bottom: 10px; font-size: 13px; max-height: 120px; overflow-y: auto; }
+        .admin-panel { background: #fff3cd; border: 1px solid #ffeeba; padding: 8px; border-radius: 6px; margin-bottom: 10px; font-size: 13px; max-height: 130px; overflow-y: auto; }
         .contacts-bar { display: flex; gap: 5px; overflow-x: auto; margin-bottom: 8px; padding-bottom: 4px; }
         .contact-chip { background: #e2e8f0; padding: 5px 12px; border-radius: 15px; font-size: 12px; cursor: pointer; white-space: nowrap; border: 1px solid #cbd5e1; color: #334155; font-weight: bold; display: flex; align-items: center; gap: 5px; }
         .contact-chip:hover { background: #cbd5e1; }
@@ -98,8 +97,8 @@
     </div>
 </div>
 
-<!-- صوت التنبيه للرسائل -->
-<audio id="notif-sound" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" preload="auto"></audio>
+<!-- صوت تنبيه قوي للرسائل -->
+<audio id="notif-sound" src="https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3" preload="auto"></audio>
 
 <script>
     const SERVER_URL = "https://mine-chat1.onrender.com";
@@ -112,7 +111,7 @@
         if (savedUser) {
             startChatSession(savedUser, savedAdmin, savedUser.toLowerCase() === 'hemo');
         }
-        if (Notification.permission !== "granted") {
+        if (Notification.permission !== "granted" && Notification.permission !== "denied") {
             Notification.requestPermission();
         }
     };
@@ -180,7 +179,7 @@
 
         if(isAdmin || username.toLowerCase() === 'hemo') {
             document.getElementById('admin-section').classList.remove('hidden');
-            fetchAdminUsers(username);
+            fetchAdminUsers();
         }
 
         renderContacts();
@@ -189,7 +188,7 @@
         chatInterval = setInterval(() => {
             const receiver = document.getElementById('receiver').value.trim();
             if(receiver) fetchMessages(username, receiver);
-            if(isAdmin || username.toLowerCase() === 'hemo') fetchAdminUsers(username);
+            if(isAdmin || username.toLowerCase() === 'hemo') fetchAdminUsers();
         }, 2000);
     }
 
@@ -248,9 +247,9 @@
         fetchMessages(currentUser, username);
     }
 
-    async function fetchAdminUsers(adminUser) {
+    async function fetchAdminUsers() {
         try {
-            const res = await fetch(`${SERVER_URL}/admin/users?adminUser=${adminUser}`);
+            const res = await fetch(`${SERVER_URL}/admin/users`);
             if(!res.ok) return;
             const users = await res.json();
             const listDiv = document.getElementById('users-list');
@@ -262,39 +261,39 @@
             }
 
             users.forEach(u => {
+                let banText = u.isBanned ? 'إلغاء الحظر' : 'حظر';
+                let banColor = u.isBanned ? 'green' : 'orange';
                 listDiv.innerHTML += `<div style="display: flex; justify-content: space-between; align-items: center; margin: 3px 0;">
                     <span>👤 ${u.username} ${u.isBanned ? '(محظور)' : ''}</span>
                     <div>
                         ${u.username.toLowerCase() !== 'hemo' ? `
-                            <button onclick="banUser('${u.username}', '${adminUser}')" style="padding:2px 6px; background:orange; font-size:10px; width:auto; margin-left:3px;">حظر</button> 
-                            <button onclick="deleteUser('${u.username}', '${adminUser}')" style="padding:2px 6px; background:red; font-size:10px; width:auto;">حذف</button>
+                            <button onclick="banUser('${u.username}')" style="padding:2px 6px; background:${banColor}; font-size:10px; width:auto; margin-left:3px;">${banText}</button> 
+                            <button onclick="deleteUser('${u.username}')" style="padding:2px 6px; background:red; font-size:10px; width:auto;">حذف</button>
                         ` : '<span style="color:blue; font-size:10px;">(الأدمن الرئيسي)</span>'}
                     </div>
                 </div>`;
             });
-        } catch(e) {
-            console.error("خطأ في جلب مستخدمي الأدمن");
-        }
+        } catch(e) {}
     }
 
-    async function banUser(target, adminUser) {
-        if(!confirm(`حظر ${target} لمدة 24 ساعة؟`)) return;
+    async function banUser(target) {
+        if(!confirm(`تغيير حالة حظر المستخدم ${target}؟`)) return;
         await fetch(`${SERVER_URL}/admin/ban-user`, {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({adminUser, targetUser: target})
+            body: JSON.stringify({ targetUser: target })
         });
-        fetchAdminUsers(adminUser);
+        fetchAdminUsers();
     }
 
-    async function deleteUser(target, adminUser) {
-        if(!confirm(`حذف حساب ${target} لتفريغ مكانه؟`)) return;
+    async function deleteUser(target) {
+        if(!confirm(`حذف حساب ${target} نهائياً؟`)) return;
         await fetch(`${SERVER_URL}/admin/delete-user`, {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({adminUser, targetUser: target})
+            body: JSON.stringify({ targetUser: target })
         });
-        fetchAdminUsers(adminUser);
+        fetchAdminUsers();
     }
 
     async function sendMessage() {
@@ -329,9 +328,22 @@
                 const latestMsg = messages[messages.length - 1];
                 if (latestMsg.id > lastMsgId && latestMsg.sender !== currentUser) {
                     lastMsgId = latestMsg.id;
-                    document.getElementById('notif-sound').play().catch(e => {});
+                    
+                    const sound = document.getElementById('notif-sound');
+                    sound.currentTime = 0;
+                    sound.play().catch(e => {});
+
                     if (Notification.permission === "granted") {
-                        new Notification(`رسالة جديدة من ${latestMsg.sender}`, { body: latestMsg.text });
+                        try {
+                            const notification = new Notification(`💬 رسالة جديدة من ${latestMsg.sender}`, {
+                                body: latestMsg.text,
+                                icon: "https://cdn-icons-png.flaticon.com/512/733/733585.png"
+                            });
+                            notification.onclick = function() {
+                                window.focus();
+                                selectReceiver(latestMsg.sender);
+                            };
+                        } catch (err) {}
                     }
                 }
             }
